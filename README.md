@@ -1,4 +1,4 @@
-# dataroom-stata
+# data repository for the paper on the Human Brain Project (HBP) Forum (Kreyer and Wang, 2022)
 This is the original Stata setup for the data room.
 
 ## Instructions
