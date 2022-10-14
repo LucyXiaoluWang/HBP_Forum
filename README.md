@@ -2,8 +2,6 @@
 This repository contains the replication package (code and data) for the paper "Collaborating Neuroscience Online: The Case of the Human Brain Project Forum" by Ann-Christin Kreyer and Lucy Xiaolu Wang in preparation for the R&R at PLOS ONE. The corresponding Max Planck Institute Discussion Paper is avaialble at: https://ssrn.com/abstract=4126273
 
 ## Folder description
-%You can clone this project by clicking on the `Use this template`.
-
 `Data` folder contains aggregated and anonymized data for replication.
 `Code` folder contains do files used to perform the data analyses.
 
