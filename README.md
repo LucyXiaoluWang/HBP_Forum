@@ -4,20 +4,7 @@ This repository contains the replication package (code and data) for the paper "
 ## Folder description
 %You can clone this project by clicking on the `Use this template`.
 
+`Data` folder contains aggregated and anonymized data for replication.
+`Code` folder contains do files used to perform the data analyses.
 
-## Directory structure on X
-
-`X:\Dataroom\` followed by a folder per doctoral student in the format"
-
-```
-<year>_<username>
-```
-
-For example: `2021_buue`
-  
-Then a replicable folder for every chapter:
- ```
- <year>_<username>_Ch<n>_<Project_name>
- ```  
- For example: `2021_buue_Ch1_Dataroom`
-  
+If you have any questions or would like to discuss, please feel free to contact us at Ann-Christin.Kreyer@ip.mpg.de and xiaoluwang@umass.edu. 
