@@ -3,6 +3,7 @@ This repository contains the replication package (code and data) for the paper "
 
 ### Folder description
 `Data` folder contains aggregated and anonymized data for replication.
+
 `Code` folder contains do files used to perform the data analyses.
 
 If you have any questions or would like to discuss, please feel free to contact us at Ann-Christin.Kreyer@ip.mpg.de and xiaoluwang@umass.edu. 
