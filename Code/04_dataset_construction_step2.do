@@ -16,15 +16,13 @@
 **# creating dataset containing aggregated variables (post-quarter-level)
 /*
 prepare post-quarter-level regression dataset
-	- hbp-platform relevant
-	- # countries
-	- # users per quarter
-	- # replies per quarter
-	- # admins per quarter
-	- # questions per quarter
-	add-on
-	- solved in the quarter?
-subset of all posts but using only the first question
+	- generate indicator for the questions asked within the post
+	- determine the solving time of the first question asked and solved 
+	- subset the data by keeping only the first question and its solution
+	- adding the anonymized user data 
+	- generate indicators for the seniority level, solving status and hbp-partnership-status during the phases in which the post/reply was sent
+	- 
+
 */
 
 * Starting with the preparing the categorical variable and the time variable
@@ -186,8 +184,8 @@ replace i_sen = sen_2 if i_pph3==1
 label define sen_label 0 "unknown" 1 "undergraduate" 2 "graduate" 3 "junior" 4 "senior" 5 "senior software" 6 "non_academic" 
 label values i_sen sen_label
 tab i_sen
-
-
+*-------------------------------------------------------------------------------
+* similar we need an indicator whether the affiliation of the user was an HBP Partner in the respective phase
 * generate summarizing indicator whether user was hbp_partner when posting/replying 
 gen i_hbppartner=0
 replace i_hbppartner=i_hbppartner_0 if i_pph0==1
@@ -207,47 +205,18 @@ des country
 replace country=country_ph0 if i_pph0==1
 replace country=country_ph1 if i_pph1==1
 replace country=country_ph2 if i_pph2==1
-replace country=country_ph2 if i_pph3==1
+replace country=country_ph3 if i_pph3==1
 tab country
 assert missing(country) if i_sen==0
 li id_user if missing(country) & i_sen!=0
 tab country i_sen, missing
 
-/*
-*local vars1 "Algeria Austria Belgium Czech Denmark Finland France Germany Hungary Ireland Italy Netherlands Norway Spain Sweden Switzerland Kingdom"
-*local vars2 "Canada China Cyprus Japan Egypt India Nigeria USA Taiwan" 
-*one Q and no info
-local vars1 "Austria Belgium Czech Denmark Finland France Germany Hungary Ireland Italy Netherlands Norway Spain Sweden Switzerland Kingdom unknown"
-local vars2 "Algeria Canada China Japan Egypt India USA Taiwan Nigeria" 
 
-local vars "`vars1' `vars2'"
-
-foreach var of local vars {
-	gen i_`var' = (strmatch(country,"*`var'*")==1)
-	gen n_`var' = (strlen(country)-strlen(subinstr(country,"`var'","",.)))/strlen("`var'")
-}
-
-* count the unique countries per post
-*/
 cou if id_post==.
 drop if id_post==.
 save hbp_forum_post_quarter_2agg, replace
 
-/*
 
-use hbp_forum_user_databank_Oct21_fin_plusHBP_fin, clear
-
-merge 1:m id_user using hbp_forum_post_quarter_2agg, keepusing(id_user)
-keep if _merge==3
-duplicates drop
-save hbp_postReg_user_databank, replace
-use hbp_forum_post_quarter_2agg, clear
-keep id_post id_user i_code id_repl topic_status status i_hbpplatform re_opened jira_posted solv_jira user_tag seniority_ph0 seniority_ph1 seniority_ph2 sen_0 sen_1 sen_2 i_sen
-duplicates drop
-save hbp_postReg_codeStatusRelevance_table, replace
-*/
-*save hbp_forum_post_quarter_2agg_wo_multi, replace
-*-----------------------
 *------------------------------ 
 use hbp_forum_post_quarter_2agg, clear
 *use hbp_forum_post_quarter_2agg_wo_multi, clear
