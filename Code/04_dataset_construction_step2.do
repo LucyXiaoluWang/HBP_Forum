@@ -205,7 +205,7 @@ des country
 replace country=country_ph0 if i_pph0==1
 replace country=country_ph1 if i_pph1==1
 replace country=country_ph2 if i_pph2==1
-replace country=country_ph3 if i_pph3==1
+replace country=country_ph2 if i_pph3==1
 tab country
 assert missing(country) if i_sen==0
 li id_user if missing(country) & i_sen!=0
@@ -214,20 +214,19 @@ tab country i_sen, missing
 
 cou if id_post==.
 drop if id_post==.
-save hbp_forum_post_quarter_2agg, replace
-
+save hbp_forum_pq_2agg_step2, replace
+* originally hbp_forum_post_quarter_2agg,
 
 *------------------------------ 
-use hbp_forum_post_quarter_2agg, clear
-*use hbp_forum_post_quarter_2agg_wo_multi, clear
-
+use hbp_forum_pq_2agg_step2, clear
+*originally use hbp_forum_post_quarter_2agg, clear
+/* next steps_
+	- calcualte the overall number of solved posts (and type of solving status) per quarter 
+	- calucalte the number of tags per message (to then aggregate it on post level in the next step)
+*/
 sort msg_yqu id_post
-*create dummies for the solving categories
-
-
-
 	
-*total number of posts quarter within a status category 
+*total number of posts quarter within a status category over all posts  
 bys msg_yqu: egen nyqu_status_admin = total(stat_admin_sol) if stat_admin_sol==1 
 bys msg_yqu: egen nyqu_status_user = total(stat_user_sol) if stat_user_sol==1 
 bys msg_yqu: egen nyqu_status_info = total(stat_info) if stat_info==1 
@@ -236,7 +235,7 @@ bys msg_yqu: egen nyqu_unsolved = total(stat_unsolved) if stat_unsolved==1
 
 
 *number of tags per post
-**# Bookmark #1
+
 
 gen n_tag = 0
 replace n_tag=1 if !missing(tagged_user_id1)& missing(tagged_user_id2) & missing(tagged_user_id3)
@@ -245,9 +244,19 @@ replace n_tag=3 if !missing(tagged_user_id1)& missing(tagged_user_id2) & !missin
 tab tagged_user_id3
 li id_post tagged_user_id1 tagged_user_id2 tagged_user_id3 n_tag if n_tag!=0
 tab id_post if n_tag!=0
-save data_postyqu_2reshape_status_1, replace
 
-use data_postyqu_2reshape_status_1, clear
+save hbp_forum_pq_2reshape_1, replace
+* originally: save data_postyqu_2reshape_status_1, replace
+*-----------------------------------------------------------------------------
+use hbp_forum_pq_2reshape_1, clear
+* originally data_postyqu_2reshape_status_1
+/* next steps:
+generate the indicator variables for the first post characteristics and save it 
+in a seperate file
+	- whether the poster was female, hbp-affiliated, senior or junior
+	- whether the first post contained code 
+*/
+
 keep id_post id_repl gender i_hbppartner code_post i_sen
 keep if id_repl==1
 tab i_sen, sort
@@ -270,8 +279,391 @@ replace poster_code=0 if poster_code==.
 replace poster_junior=0 if poster_junior==.
 replace poster_senior=0 if poster_senior==.
 keep id_post poster_female poster_hbp poster_code poster_junior poster_senior
-save data_postyqu_2reshape_poster, replace
 
-	 
-*save data_postyqu_2reshape_oneQ_1, replace
 
+save hbp_forum_pq_2reshape_poster, clear
+*originally: data_postyqu_2reshape_poster, replace 
+*--------------------------------------------------------------------------
+*--------------------------------------------------------------------------
+**# Aggregating the data to post-quarter level 
+* as we are looping through all 534 posts, we have to split the aggregation into
+* several steps 
+
+use hbp_forum_pq_2agg_step2, clear
+* originally: hbp_forum_post_quarter_2agg, clear
+/* steps: 
+aggregate the informtion for the replies (id_repl>1) to post-quarter level
+for this we create tags per post for 
+	- individual users replying 
+	- indvidiual users with hbp affiliation
+	- individual users without hbp affiliation
+	- individual users without affiliation information 
+we then loop through each post using the post-id to calculate the 
+	- number of individual users replying 
+	- number of indvidiual users with hbp affiliation
+	- number of individual users without hbp affiliation
+	- number of individual users without affiliation information 
+per post and quarter 
+*/
+
+egen tag_duserpp = tag(id_user id_post) if id_repl!=1
+egen tag_duserpp_hbp = tag(id_user id_post) if i_hbppartner==1 & id_repl!=1
+egen tag_duserpp_nohbp = tag(id_user id_post) if i_hbppartner==0 & id_repl!=1
+egen tag_duserpp_noaff = tag(id_user id_post) if i_hbppartner==2 & id_repl!=1
+forvalues i=1/534{	
+	*total number of users per post with hbp affiliaton or not 
+	*  0 "No HBP partner" 1 "HBP partner" 2 "No information" 
+	bys msg_yqu: egen nyqu_user_`i'=total(tag_duserpp) if id_post==`i'
+	bys msg_yqu: egen nyqu_upphbp_`i'= total(tag_duserpp_hbp) if id_post==`i'
+	bys msg_yqu: egen nyqu_uppnohbp_`i'= total(tag_duserpp_nohbp) if id_post==`i'
+	bys msg_yqu: egen nyqu_uppnoAffln_`i' = total(tag_duserpp_noaff) if id_post==`i'
+	bys msg_yqu: egen nyqu_newQ_`i' = total(re_op_msg) if id_post==`i'
+}
+
+* we keep only the newly generated variables and the id_post and msg_yqu for reshaping later
+keep id_post msg_yqu nyqu_user_*  /// 
+	nyqu_upphbp_* nyqu_uppnohbp_* nyqu_uppnoAffln_* nyqu_newQ_*
+cou if id_post==.	 
+save hbp_forum_pq_2reshape_2, replace
+*originally: data_postyqu_2reshape_status_2, replace
+
+*---------------------------------------
+use hbp_forum_pq_2agg_step2, clear
+*originally:  hbp_forum_post_quarter_2agg, clear
+/* steps
+aggregate the informtion for the replies (id_repl>1) to post-quarter level
+first we recover the information whether the user was admin from the databank 
+for this we create tags per post for 
+	- individual users replying 
+	- indvidiual admin users 
+	- individual female users 
+	- individual male users  
+we then loop through each post using the post-id to calculate the 
+	- number of individual users replying 
+	- number of indvidiual admin users 
+	- number of individual female/male users 
+	- number of replies (to the first question)
+	- number of replies containing code 
+per post and quarter 
+*/
+
+merge m:1 id_user using hbp_forum_user_databank_anonym, keepusing(i_admin i_jira)
+keep if _merge==3
+drop _merge
+
+des
+	
+
+* number of code per post
+egen tag_user = tag(id_user id_post) if id_repl!=1 
+egen tag_admin = tag(id_user id_post) if i_admin==1 & id_repl!=1
+egen tag_fem = tag(id_user id_post) if gender==1 & id_repl!=1
+egen tag_male = tag(id_user id_post) if gender==0 & id_repl!=1
+*egen tag_change = tag(id_user id_post) if change==1
+
+forvalues i=1/534{	
+	*total number of users per post with hbp affiliaton or not 
+	*  0 "No HBP partner" 1 "HBP partner" 2 "No information" 
+	bys msg_yqu: egen nyqu_users_`i' = total(tag_user) if id_post==`i' 
+	bys msg_yqu: egen nyqu_code_`i'=total(code_post) if id_post==`i' & id_repl!=1
+	bys msg_yqu: egen nyqu_replies_`i'=total(x) if id_post==`i' & id_repl!=1
+	bys msg_yqu: egen nyqu_admin_`i'=total(tag_admin) if id_post==`i'
+	bys msg_yqu: egen nyqu_female_`i'=total(tag_fem) if id_post==`i' 
+	*bys msg_yqu: egen nyqu_male_`i'=total(tag_male) if id_post==`i'
+	*bys msg_yqu: egen nyqu_change_`i' = total(tag_change) if id_post==`i'
+
+}
+
+keep id_post msg_yqu nyqu_code_* nyqu_replies_* /// 
+	nyqu_admin_* nyqu_female_* nyqu_users_* 
+
+save hbp_forum_pq_2reshape_3, replace
+*originally: data_postyqu_2reshape_status_3, replace
+
+
+*--------------------------------------- seniority
+use hbp_forum_pq_2agg_step2, clear
+*originally:  hbp_forum_post_quarter_2agg, clear
+/* steps
+aggregate the informtion for the replies (id_repl>1) to post-quarter level
+for this we create tags per post for 
+	- individual users who are juniors 
+	- indvidiual users who are seniors
+	- individual users who are non-academic
+we then loop through each post using the post-id to calculate the 
+	- number of individual junior users replying 
+	- number of indvidiual senior users replying 
+	- number of individual non-academic users replying  
+per post and quarter 
+*/
+
+
+des
+* number of seniority levels per post
+egen tag_junior = tag(id_user id_post) if i_sen==1| i_sen==2 | i_sen==3
+egen tag_senior = tag(id_user id_post) if i_sen==4| i_sen==5
+egen tag_nonacad = tag(id_user id_post) if i_sen==6
+
+
+forvalues i=1/534{	
+	bys msg_yqu: egen nyqu_re_junior_`i' = total(tag_junior) if id_post==`i' & id_repl!=1
+	bys msg_yqu: egen nyqu_senior_`i'=total(tag_senior) if id_post==`i' & id_repl!=1
+	bys msg_yqu: egen nyqu_re_nonacad_`i'=total(tag_nonacad) if id_post==`i' & id_repl!=1
+
+
+}
+
+keep id_post msg_yqu nyqu_re_junior_* nyqu_senior_* /// 
+	nyqu_re_nonacad_* 
+	
+save hbp_forum_pq_2reshape_4, replace
+*originally data_postyqu_2reshape_status_4, replace
+
+
+
+*---------------
+use hbp_forum_pq_2agg_step2, clear
+*originally:  hbp_forum_post_quarter_2agg, clear
+/* calculate the number of distinct countries per post and quarter 
+Source: https://www.statalist.org/forums/forum/general-stata-discussion/general/1486683-counting-distinct-values-cumulatively-by-group
+*/
+
+keep id_post msg_yqu country
+
+bysort id_post country (msg_yqu) : gen wanted = _n == 1
+bysort id_post (msg_yqu country): replace wanted = sum(wanted)
+by id_post msg_yqu: replace wanted = wanted[_N]
+
+list in 1/100, sepby(id_post msg_yqu)
+rename wanted nyqu_ctry
+*variation in geographic differences over time irrespective of post-id 
+egen tag = tag(country msg_yqu)
+egen distinct = total(tag), by(msg_yqu) 
+sort msg_yqu
+list, sepby(msg_yqu)
+rename distinct country_yqu
+
+label variable country_yqu "# countries per quarter"
+label variable nyqu_ctry "# countries per post per quarter"
+drop country tag
+duplicates drop
+save hbp_forum_pq_country, replace 
+* originally: hbp_forum_post_quarter_country
+
+* ----------------------------------------------------------------------------
+*-------------------------------------------------------------------------------
+**# Collapsing and reshaping the data 
+
+/* Currently the data is wide. We have each variable 534 times (e.g. nyqu_senior_332)
+We will therefore first collaps the dataset by summing the variables up over msg_yqu and id_post and then collapse it again
+over the quarter-level 
+
+In a second step we will then reshape the data from wide to long using the msg_yqu as 
+existing id and creating the post identificator from the variable names.
+
+In each round of reshaping we also label the variables. 
+
+For the variables female/admin users replying and number of messages containing code_exist
+we also calculate the share of these variables per post. 
+
+After the reshaping, the newly created datasets are merged with the post-id and the msg_yqu as keys.
+*/
+*---------------------------------------------------------------------------
+* First round of reshaping
+
+use hbp_forum_pq_2reshape_2, clear 
+*originally data_postyqu_2reshape_status_2, clear
+cou if msg_yqu==.
+unique id_post 
+* making sure that there are no duplicates 
+duplicates report
+duplicates drop
+des
+
+collapse nyqu_user_* nyqu_upphbp_* /// 
+	nyqu_uppnohbp_* nyqu_uppnoAffln_* nyqu_newQ_*  , by(msg_yqu id_post)	
+
+collapse nyqu_user_* nyqu_upphbp_* /// 
+	nyqu_uppnohbp_* nyqu_uppnoAffln_* nyqu_newQ_* ,  by(msg_yqu)
+
+
+
+reshape long nyqu_user_ nyqu_upphbp_ nyqu_uppnohbp_ nyqu_uppnoAffln_  nyqu_newQ_, i(msg_yqu) j(postid) 
+		
+rename *_ *
+rename postid id_post
+
+* variable labeling 
+label variable nyqu_user "# user replying per topic/quarter"
+label variable nyqu_newQ "# new questions per topic/quarter"
+label variable nyqu_upphbp "# user replying per topic/quarter w/ HBP affil."
+label variable nyqu_uppnohbp "# user replying per topic/quarter w/o HBP affil."
+label variable nyqu_uppnoAffln "# user replying per topic/quarter w/o known affil."
+
+
+save HBP_forum_postquarter_long_1, replace
+
+
+*-------------------------------------------------------------------------------
+* 2nd round of reshaping 
+use hbp_forum_pq_2reshape_3, clear 
+* originally: data_postyqu_2reshape_status_3, clear
+cou if msg_yqu==.
+unique id_post 
+duplicates report
+duplicates drop
+des
+
+collapse nyqu_code_* nyqu_replies_* /// 
+	nyqu_admin_* nyqu_female_* nyqu_users_*  , by(msg_yqu id_post)	
+
+collapse nyqu_code_* nyqu_replies_* /// 
+	nyqu_admin_* nyqu_female_* nyqu_users_*  ,  by(msg_yqu)
+
+reshape long nyqu_code_ nyqu_replies_ /// 
+	nyqu_admin_ nyqu_female_ nyqu_users_  , i(msg_yqu) j(postid) 
+		
+rename *_ *
+rename postid id_post
+
+* calculating the share of female/admin users replying in the respective quarter compared to the overall number 
+* of users replying to the post in that quarter
+gen pyq_female= nyqu_female/nyqu_user
+gen pyq_code= nyqu_code/(nyqu_replies) 
+gen pyq_admin= nyqu_admin/nyqu_users	
+
+label variable pyq_female "% female users replying per topic/quarter"
+label variable pyq_code "% replies with code per topic/quarter"
+label variable pyq_admin "% admin users replying per topic/quarter"
+label variable nyqu_female "# female users replying per topic/quarter"
+label variable nyqu_admin "# admins replying per topic/quarter"
+label variable nyqu_code "# replies with code per topic/quarter"
+
+save HBP_forum_postquarter_long_2, replace
+
+
+
+*-------------------------------------------------------------------------------
+* 3rd round of reshaping 
+use hbp_forum_pq_2reshape_4, clear 
+* originally: data_postyqu_2reshape_status_4, clear
+
+keep id_post msg_yqu nyqu_re_junior_* nyqu_senior_* /// 
+	nyqu_re_nonacad_* 
+
+
+cou if msg_yqu==.
+unique id_post 
+duplicates report
+duplicates drop
+des
+
+collapse nyqu_re_junior_* nyqu_senior_* /// 
+	nyqu_re_nonacad_*  , by(msg_yqu id_post)	
+
+collapse nyqu_re_junior_* nyqu_senior_* /// 
+	nyqu_re_nonacad_*  ,  by(msg_yqu)
+
+reshape long nyqu_re_junior_ nyqu_senior_ /// 
+	nyqu_re_nonacad_  , i(msg_yqu) j(postid) 
+		
+rename *_ *
+rename postid id_post
+
+
+
+save HBP_forum_postquarter_long_3, replace
+
+
+
+
+
+*-------------------------------------------------------------------------------
+*-------------- combine the datasets and generate additional share variables
+use HBP_forum_postquarter_long_2, clear
+
+merge 1:1 id_post msg_yqu using HBP_forum_postquarter_long_1
+
+merge 1:1 id_post msg_yqu using HBP_forum_postquarter_long_3
+drop _merge 
+* we drop observations if they contain no entries in any of the variables
+drop if nyqu_code==. & nyqu_replies==. & ///
+	nyqu_admin==. & nyqu_female==. & nyqu_users==. & /// 
+	nyqu_user==. & nyqu_upphbp==. & nyqu_uppnohbp==. & ///
+	nyqu_uppnoAffln==. & nyqu_newQ==. & nyqu_re_nonacad==. & nyqu_senior==. & nyqu_re_junior==.
+
+*generate additional shares 
+gen pyq_hbp= nyqu_upphbp/nyqu_user
+label variable pyq_hbp "% unique users affiliated with HBP partners"
+gen pyq_senior= nyqu_senior/nyqu_user
+gen pyq_re_junior= nyqu_re_junior/nyqu_user
+gen pyq_re_nonacad= nyqu_re_nonacad/nyqu_user
+
+label variable pyq_senior "% senior users replying per post/quarter"
+label variable pyq_re_junior "% junior users replying per post/quarter"
+label variable pyq_re_nonacad "% non-academic users replying per post/quarter"
+
+label data "long Forum data, post-quarter level, no meta-data, intermediate"	
+save HBP_forum_postquarter_long_int, replace
+*originally: HBP_forum_postquarter_long, clear
+
+*-------------------------------------------------------------------------------
+**# Adding the meta-level data 
+
+/* Steps
+In the now generated dataset we have only the variables which were aggregated to the post-quarter level.
+But not the variables on post-level or quarter-level only are not included and we can recover them by merging the intermediate 
+dataset with a dataset containing the meta-level information.
+*/
+
+use hbp_forum_pq_2reshape_1, clear 
+*originally: data_postyqu_2reshape_status_1, clear
+des
+replace solv_jira=1 if id_post==202 | id_post==138
+keep n_replies id_post cat_all re_opened status_re status i_hbpplatform y i_code ///
+	nyqu_status_admin nyqu_status_user nyqu_status_info /// 
+	nyqu_unclear nyqu_unsolved msg_yqu jira_posted solv_jira status_re 
+duplicates report
+duplicates drop
+save hbp_forum_pq_metalevel
+*originally data_postyqu_metalevel, replace
+
+*-------------------------------------------------------------------------------
+*Combine the meta-level with the intermediate dataset 
+use HBP_forum_postquarter_long_int, clear 
+*originally: HBP_forum_postquarter_long, clear
+merge 1:m id_post msg_yqu using hbp_forum_pq_metalevel
+drop _merge
+des
+
+label variable nyqu_status_user "# total user-solved posts per quarter"
+label variable nyqu_status_admin  "# total admin-solved posts per quarter"
+label variable nyqu_status_info "# total info posts per quarter"
+label variable nyqu_unclear "# total posts per quarter w/ unclear status"
+label variable nyqu_unsolved "# total posts unsolved posts per quarter"
+label variable n_replies "# of all replies per post"
+label variable y "year of post creation"
+label variable i_code "indicator: post w/ code"
+label variable i_hbpplatform "indicator: post is platform relevant"
+label variable re_opened "indicator: post has new questions"
+
+des
+
+save HBP_forum_postquarter_long_int2, replace
+*------------------------------------------------------------------------------
+* adding the data on the poster and first post and the country and replacing missing data by 0
+use HBP_forum_postquarter_long_int2, clear
+
+merge m:1 id_post using data_postyqu_2reshape_poster
+drop _merge
+local varlist poster_female poster_hbp pyq_hbp nyqu_code nyqu_replies nyqu_admin nyqu_female nyqu_users pyq_admin pyq_female pyq_code nyqu_user nyqu_upphbp nyqu_uppnohbp nyqu_uppnoAffln nyqu_newQ n_replies i_code i_hbpplatform re_opened status nyqu_status_admin nyqu_status_user nyqu_status_info nyqu_unclear nyqu_unsolved poster_junior poster_senior poster_code poster_hbp pyq_re_nonacad pyq_re_junior pyq_senior nyqu_re_nonacad nyqu_senior nyqu_re_junior
+foreach var of local varlist {
+	replace `var'=0 if `var'==.
+}
+duplicates report id_post msg_yqu
+
+merge 1:1 id_post msg_yqu using hbp_forum_post_quarter_country
+drop _merge
+
+label data "Long, agg. Forum data, post-quarter-level"
+save HBP_forum_postquarter_long, replace
