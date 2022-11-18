@@ -637,8 +637,6 @@ dataset with a dataset containing the meta-level information.
 
 use hbp_forum_pq_2reshape_1, clear 
 
-des
-replace solv_jira=1 if id_post==202 | id_post==138
 keep id_post cat_all re_opened status_sol status i_hbpplatform y i_code ///
 	nyqu_status_admin nyqu_status_user nyqu_status_info /// 
 	nyqu_unclear nyqu_unsolved msg_yqu jira_posted solv_jira status_sol 
@@ -669,7 +667,11 @@ use HBP_forum_postquarter_long_int2, clear
 
 merge m:1 id_post using data_postyqu_2reshape_poster
 drop _merge
-local varlist poster_female poster_hbp pyq_hbp nyqu_code nyqu_replies nyqu_admin nyqu_female nyqu_users pyq_admin pyq_female pyq_code nyqu_user nyqu_upphbp nyqu_uppnohbp nyqu_uppnoAffln nyqu_newQ n_replies i_code i_hbpplatform re_opened status nyqu_status_admin nyqu_status_user nyqu_status_info nyqu_unclear nyqu_unsolved poster_junior poster_senior poster_code poster_hbp pyq_re_nonacad pyq_re_junior pyq_senior nyqu_re_nonacad nyqu_senior nyqu_re_junior
+local varlist poster_female poster_hbp pyq_hbp nyqu_code nyqu_replies nyqu_admin nyqu_female nyqu_users ///
+	pyq_admin pyq_female pyq_code nyqu_user nyqu_upphbp nyqu_uppnohbp nyqu_uppnoAffln nyqu_newQ i_code /// 
+	i_hbpplatform re_opened status nyqu_status_admin nyqu_status_user nyqu_status_info nyqu_unclear /// 
+	nyqu_unsolved poster_junior poster_senior poster_code poster_hbp pyq_re_nonacad pyq_re_junior ///
+	pyq_senior nyqu_re_nonacad nyqu_senior nyqu_re_junior
 foreach var of local varlist {
 	replace `var'=0 if `var'==.
 }
