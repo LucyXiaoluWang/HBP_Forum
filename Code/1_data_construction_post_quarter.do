@@ -107,8 +107,6 @@ drop if check==0
 * verifying that we still have all initial questions in the dataset
 tab id_msg
 
-// @ACK: the steps 4-5 logic is not exactly clear - we need to add some explanation (let's discuss)
-
 
 ***-------------------------------------------
 *** create separate indicator variables for each solving status, summarizing the different user- 
@@ -153,12 +151,6 @@ label variable status "0=open, 1=solved"
 
 tab status
 save hbp_forum_pqu_2agg_step1, replace 
-
-// @ACK: ok, now I see where "step 3" comes - the order feels flipped,
-// we'd better assign better names, or (easier) define at the very beginning block
-// what are the steps involved and why we number them in this particular way 
-// Or, we rename the orders to align them well with the order they show up in our code 
-// @LXW: I renamed the file - it was actually easier ;-)
 
 *-------------------------------------------------------------------------------
 **# Adding the user data to the forum data
@@ -301,12 +293,6 @@ replace poster_senior=0 if poster_senior==.
 keep id_post poster_female poster_hbp poster_code poster_junior poster_senior
 
 save hbp_forum_pq_2reshape_poster, clear
-
-// @ACK: hi, here I think we use this for the poster at MPI, correct?
-// we can keep and just add a note this is the version used for an MPI poser
-// (which we can also release after PLOS ONE got accepted.) @LXW: no, we actually 
-// use it here in the aggregation: with "poster" I am referring to the initial post characteristics as I have written in the comments :-)
-
 
 *--------------------------------------------------------------------------
 *--------------------------------------------------------------------------
