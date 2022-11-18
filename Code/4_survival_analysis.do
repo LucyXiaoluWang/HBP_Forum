@@ -42,23 +42,27 @@ stcox i.i_hbpplatform ib2.status_cum p_code p_female  p_userhbp  p_senior n_ctry
 	label  /// 
 	nocons addtext(Year FE, YES)
 
+	
 * Column 2
 stcox i.i_hbpplatform ib2.status_cum  i.poster_code i.poster_hbp i.poster_female i.poster_senior i.y, vce(robust)
  outreg2 using "$RESULTS\Regression_survival.doc", append eform  /// 
 	keep(i.i_hbpplatform ib2.status_cum  i.poster_code i.poster_hbp i.poster_female i.poster_senior) /// 
 	label nocons addtext(Year FE, YES)
 
+	
 * Column 3	
 stcox i.i_hbpplatform p_code p_female  p_userhbp  p_senior ib2.status_cum  n_ctry i.poster_code i.poster_hbp i.poster_female i.poster_senior i.y, vce(robust)
 outreg2 using "$RESULTS\Regression_survival.doc", append eform  /// 
 	keep(i.i_hbpplatform ib2.status_cum p_code p_female  p_userhbp  p_senior n_ctry i.poster_code i.poster_hbp i.poster_female i.poster_senior ) /// 
 	label nocons addtext(Year FE, YES)
 
+	
 * column 4	
 stcox ib2.status_cum p_code p_female  p_userhbp  p_senior n_ctry i.poster_code i.poster_hbp i.poster_female i.poster_senior  i.cat_all i.y, vce(robust)
  outreg2 using "$RESULTS\Regression_survival.doc", append eform  /// 
 	keep(ib2.status_cum p_code p_female  p_userhbp  p_senior n_ctry i.poster_code i.poster_hbp i.poster_female i.poster_senior i.cat_all) /// 
 	label 	nocons addtext(Year FE, YES)
+	
 	
 * Column 5 Time-to-event
 
