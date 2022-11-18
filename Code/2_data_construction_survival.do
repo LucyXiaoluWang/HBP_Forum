@@ -22,37 +22,27 @@ prepare survival analysis dataset by aggregating the information to the post-lev
 	- adding the anonymized user data 
 	- generate indicators for the seniority level, solving status and hbp-partnership-status during the phases in which the post/reply was sent
 Using the datasets created before:
-	- databank
-	- poster information created in the dataset_construction_step2: hbp_forum_pq_2reshape_poster
-Create new dataset containing user data 
-Then we reshape the dataset to wide with the post-id as identificator
+	- databank hbp_forum_user_databank_anonym.dta
+	- poster information created in the data_construction_post_quarter.do: hbp_forum_pq_2reshape_poster.dta
+Then we reshape the dataset to wide with the post-id as identifiying variable
 */
 
-use hbp_forum_user_databank_anonym, clear
-des
-keep i_leader i_admin i_moderator id_user gender country_ph0 country_ph1 country_ph2 gender i_hbppartner_0 i_hbppartner_1 i_hbppartner_2 seniority_ph0 seniority_ph1 seniority_ph2
-clonevar solved_by=id_user
-
-save hbp_forum_user_databank_survival, replace
 
 
-**# Bookmark #1
+
 *xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-*simplified dataset - only first Q w/o informational posts 
-* with some info on users (country, hbp) but only on duration and agg. info
+* starting with the aggregation process 
 
-use hbp_forum_2agg_step3, clear
+use hbp_forum_data2agg, clear
 
-des
-
+* Adding user data by merging with the user databank
 merge m:1 id_user using hbp_forum_user_databank_anonym, keepusing(gender i_admin country_ph0 country_ph1 country_ph2 gender i_hbppartner_0 i_hbppartner_1 i_hbppartner_2 seniority_ph0 seniority_ph1 seniority_ph2)
 drop if _merge==2
 *keep if _merge==3
 drop _merge
 des
 
-* generate an indicator whether the user was senior/junior etc when posting/replying 
-* undergraduate=0, graduate
+* generate an categorical variable whether the user was senior/junior etc. when posting/replying to a thread
 tab seniority_ph0
 tab seniority_ph1
 tab seniority_ph2
@@ -81,7 +71,7 @@ label values i_sen sen_label
 tab i_sen
 
 
-* generate summarizing indicator whether user was hbp_partner when posting/replying 
+* generate summarizing indicator whether user was in the project phase during whe he/she replied affiliated with an HBP partner. 
 gen i_hbppartner=0
 replace i_hbppartner=i_hbppartner_0 if i_pph0==1
 replace i_hbppartner=i_hbppartner_1 if i_pph1==1
@@ -106,28 +96,16 @@ li id_user if missing(country) & i_sen!=0
 tab country i_sen, missing
 
 
-
-drop topic_id
-
-
-
 sort id_post id_msg
 
 * 
-
+* checking and correcting the foramat of the date variable for the solving time of the question
 generate date_text = string(date_solved, "%td")
-*clonevar date_text = date_solved
-
-des date_text
-des date_solved
 tostring time_solved, g(time_text2) format(%tcHH:MM:SS) force
 li time_solved time_text2 date_solved date_solved in 1/20
-
 gen double datetime_solved = clock(date_text + time_text2, "DMY hms")
 format datetime_solved %tc
 li date_text time_solved datetime_solved in 20/40
-des date_solved
-des time_solved
 li time_solved in 1/10
 li date_solved in 1/30
 
@@ -145,6 +123,7 @@ by id_post (id_msg datetime_solved), sort: replace date_sol_1=datetime_solved if
 format date_sol_1 %tcDD/NN/CCYY_HH:MM:SS
 gen day_sol_1=dofC(date_sol_1)
 format day_sol_1 %td
+label variable day_sol_1 "Solving date of the first question within the thread (MM/DD/YYYY)"
 
 * make sure that we do not have empty lines
 drop if id_msg==.
@@ -152,31 +131,36 @@ drop if id_msg==.
 * now drop the follow-up questions of each post (442 observations are dropped)
 drop if id_qu > 1 
 
-*-------------------------
-* checking the data before aggregating to make sure that within each post we have homogenous info
+***-------------------------
+*** Conducting plausibility checks with respect to solving time and solving status before aggregating.
+* Thereby, we want to ensure that within each post we have homogenous info.
 
-* 1. verifying that there is no observation for which the datetime_solved variable (so the 
-* solving time assigned to the individual reply) is not later than the solving time of the first 
-* question)
+* 1. verifying that there is no observation where the datetime_solved variable (i.e., the 
+* solving time assigned to the individual message) is not later than the solving time of the first 
+* question (this is most relevant for multi-question posts, where we mainly focus on the initial Q)
 gen x=1
 bysort id_post : replace x=0 if datetime_solved > date_sol_1 
 
-* 2. checking whether any entry has no datetime_solved at all
+* 2. Additionally, checking whether any entry has no datetime_solved at all - not the case
 li id_post id_msg status_sol id_qu datetime_solved if datetime_solved==.
 
-* 3. checking whether any first reply has an datetime_solved that is larger than the date_sol_1
+* 3. Additionally, checking whether any of the initial messages has an datetime_solved that is larger than the date_sol_1
 li id_post datetime_solved date_sol_1 id_msg if x==0 & id_msg==1
 
 * 4. checking whether any first or second reply has an datetime_solved that is larger than the date_sol_1
 li id_post datetime_solved date_sol_1 id_msg if x==0 & id_msg<=2
-*not the case - therefore no need to drop if x==0 
+*not the case - therefore no need to drop if x=
 
-* 5. check that for each post we have the same status_detail
+* 5. Lastly, we verify that for each thread has the same value for the status_detail and thus belongs to the same question
 gen check=1
+* for this we sort the data by post and message and create an indicator if the status is different
 bysort id_post (id_msg): replace check=0 if status_detail!=status_detail[1] 
 li id_post id_msg status_sol date_sol_1 if check==0
 drop if check==0
-*414 observations deleted
+*indeed there where some remaining follow-up questions left (414 observations deleted) and which were caught now by the status
+* verifying that we still have all initial questions in the dataset
+tab id_msg
+
 
 * check for issues in earliest time and correct for it 
 * 3 posts have the wrong year for the earliest date 
@@ -205,9 +189,11 @@ li id_post msg_time day d_check id_msg datetime_solved date_earl date_earl_cor d
 
 
 
-*-------------------------------------------
-* create separate indicator variables for each solving status, summarizing the different user 
+***-------------------------------------------
+*** create separate indicator variables for each solving status, summarizing the different user- 
 * solved categories or admin solved categories
+tab status_sol 
+
 gen stat_admin_sol=.
 replace stat_admin_sol=1 if status_sol=="admin_solved"
 gen stat_user_sol=.
@@ -286,19 +272,23 @@ use hbp_forum_surv_2agg_step1, clear
 egen tag_duserpp = tag(id_user id_post) if id_msg!=1
 egen n_userpp = total(tag_duserpp), by(id_post)
 tab n_userpp
+
 * # individual users w/ HBP-affiliation and % of users w/ HBP-affiliation
 *  0 "No HBP partner" 1 "HBP partner" 2 "No information" 
 egen tag_duserpp_hbp = tag(id_user id_post) if i_hbppartner==1 & id_msg!=1
 egen n_userpp_hbp= total(tag_duserpp_hbp) , by(id_post)
 tab n_userpp_hbp
 gen p_userhbp = n_userpp_hbp/n_userpp
+
 *# individual users w/o HBP-affiliation replying
 egen tag_duserpp_nohbp = tag(id_user id_post) if i_hbppartner==0 & id_msg!=1
 egen n_userpp_nohbp= total(tag_duserpp_nohbp) , by(id_post)
 tab n_userpp_nohbp
+
 *# individual users w/o known affiliation replying
 gen n_userpp_noAffln = n_userpp-n_userpp_hbp-n_userpp_nohbp
 tab n_userpp_noAffln
+
 *# & % of individual junior/senior/non-academic users replying
 egen tag_junior = tag(id_user id_post) if id_msg!=1 & (i_sen==1| i_sen==2 | i_sen==3)
 egen tag_senior = tag(id_user id_post) if id_msg!=1 &  (i_sen==4| i_sen==5)
@@ -310,17 +300,18 @@ gen p_junior = n_re_junior/n_userpp
 gen p_senior = n_re_senior/n_userpp
 gen p_nonacad = n_re_nonacad/n_userpp
 
-
 * # replies w/ code & % of replies w/ code
 egen n_code_msg=total(code_msg), by(id_post)
 tab n_code_msg
 replace n_code_msg=n_code_msg-1 if poster_code==1
 gen p_code = n_code_msg/(n_replies)
+
 * # replies by admin & % of replies by admin 
 egen tag_admin = tag(id_user id_post) if i_admin==1 & id_msg!=1
 egen n_admin=total(tag_admin), by(id_post)
 tab n_admin
 gen p_admin = n_admin/n_userpp
+
 * # and % of replies by female/male 
 egen tag_fem = tag(id_user id_post) if gender==1 & id_msg!=1
 egen n_female=total(tag_fem), by(id_post) 
@@ -330,7 +321,6 @@ egen n_male=total(tag_male), by(id_post)
 tab n_male
 gen p_female = n_female/n_userpp
 gen p_male = n_male/n_userpp
-
 
 
 * labeling the variables 
@@ -381,8 +371,7 @@ ds  date_earl_cor jira_posted solv_jira user_tag poster_female poster_junior pos
 foreach x of varlist `r(varlist)' {
 rename `x' `x'_
 }
-* last correction of jira solved post
-replace solv_jira=1 if id_post==138 | id_post==202
+
 * defining again the variables to be excluded from reshaping
 ds  date_earl_cor  poster_junior poster_senior jira_posted solv_jira user_tag poster_female poster_hbp poster_code re_opened status_cum date_sol_1 day_sol_1  n_male n_female n_admin i_hbpplatform n_userpp n_userpp_hbp n_userpp_nohbp p_code p_male p_userhbp p_female p_admin n_code_msg time_solved status_detail topic_status status id_post status_detail status datetime_solved id_msg n_userpp_nohbp n_cat cat n_repl y n_views cat_g_brain_sim_model cat_g_neuromorphic cat_g_neurorobotics cat_g_tech_support cat_g_organization cat_g_others date_late date_earl i_code n_re_junior n_re_senior n_re_nonacad p_junior p_senior p_nonacad , not 
 *reshaping the data to wide using msg_yqu as vehicle
@@ -413,9 +402,9 @@ save hbp_forum_wide_survival_oneQ_int, replace
    thus contains the country-info of each user replying 
 */
 use hbp_forum_survival_prep_2, clear
+
 keep id_post country
 drop if country=="unkown"
-* https://www.statalist.org/forums/forum/general-stata-discussion/general/1486683-counting-distinct-values-cumulatively-by-group
 bysort id_post country : gen wanted = _n == 1
 bysort id_post (country): replace wanted = sum(wanted)
 by id_post : replace wanted = wanted[_N]
@@ -426,6 +415,7 @@ drop country
 duplicates drop
 save hbp_forum_survival_oneQ_country, replace 
 
+*---------------------------------------------------------
 *Add the country info to the intermediate dataset 
 use hbp_forum_wide_survival_oneQ_int, clear
 
