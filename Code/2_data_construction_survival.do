@@ -98,8 +98,8 @@ tab country i_sen, missing
 
 sort id_post id_msg
 
-* 
-* checking and correcting the foramat of the date variable for the solving time of the question
+* -----------------------------------------------------
+* checking and correcting the format of the date variable for the solving time of the question
 generate date_text = string(date_solved, "%td")
 tostring time_solved, g(time_text2) format(%tcHH:MM:SS) force
 li time_solved time_text2 date_solved date_solved in 1/20
@@ -324,8 +324,8 @@ gen p_male = n_male/n_userpp
 
 
 * labeling the variables 
-label variable p_code "% of msgs w/ code per post"
-label variable p_userhbp "% user w/ HBP partner affil."
+label variable p_code "% messages w/ code per post"
+label variable p_userhbp "% user w/ HBP affil."
 label variable p_admin "% admin users per post"
 label variable p_female "% female users per post"
 label variable p_male "% male users per post"
@@ -339,10 +339,10 @@ label variable n_re_senior "# senior users per post"
 label variable n_re_nonacad "# non-academic users per post"
 label variable n_admin "# admins per post"
 label variable n_userpp "# user per post"
-label variable n_userpp_hbp "# user per post with hbp affiliation"
-label variable n_userpp_nohbp "# user per post w/o hbp affiliation"
+label variable n_userpp_hbp "# user per post with HBP affiliation"
+label variable n_userpp_nohbp "# user per post w/o HBP affiliation"
 label variable n_userpp_noAffln "# user per post w/o known affiliation"
-label variable n_code_msg "# posts with code per post"
+label variable n_code_msg "# messages with code per post"
 
 des
 
@@ -362,18 +362,35 @@ save hbp_forum_surv_2agg_step3, replace
 
 use hbp_forum_surv_2agg_step3, clear
 * drop data that was used for aggregation and is now unnecessary
-drop tagged_user_id* tagged_user_name* tagging_u_id* tagging_user* forward_msg note_jira msg_tag  date_solved_old time_text2 date_solved z name_user i_admin  ny_post code_exist msg_ymo msg_text time_solved_old topic name_real cat_multi cat_sum date_sol hm m qu date_text solved_by date_solved  i_pph0 i_pph1 i_pph2 i_pph3 seniority_ph0 seniority_ph1 seniority_ph2 sen_0 sen_1 sen_2 i_sen date day tim d_check x check id_qu re_op_msg status_sol stat_admin_sol stat_user_sol stat_admin_co_user_sol stat_admin_user_sol stat_co_user_sol stat_user_co_user_sol stat_info stat_unclear stat_unsolved tag_junior tag_senior tag_nonacad tm msg_date id_user doubleU i_hbppartner gender msg_time code_msg solving_msg ptr_code_sen0 country_ph0 ptr_code_sen1 country_ph1 ptr_code_sen2 country_ph2 i_hbppartner_0 i_hbppartner_1 i_hbppartner_2 tag_duserpp tag_duserpp_hbp tag_duserpp_nohbp n_userpp_noAffln tag_admin tag_fem tag_male doubleU country
+drop tagged_user_id* tagging_u_id* tagging_user* forward_msg msg_tag time_text2 date_solved z i_admin ny_post msg_text /// 
+	date_sol date_text solved_by date_solved i_pph0 i_pph1 i_pph2 i_pph3 seniority_ph0 seniority_ph1 seniority_ph2 ///
+	sen_0 sen_1 sen_2 i_sen date day tim d_check x check id_qu re_op_msg status_sol stat_admin_sol stat_user_sol ///
+	stat_admin_co_user_sol stat_admin_user_sol stat_co_user_sol stat_user_co_user_sol stat_info stat_unclear ///
+	stat_unsolved tag_junior tag_senior tag_nonacad tm msg_date id_user doubleU i_hbppartner gender msg_time ///
+	code_msg solving_msg country_ph0 country_ph1 country_ph2 i_hbppartner_0 i_hbppartner_1 i_hbppartner_2 ///
+	tag_duserpp tag_duserpp_hbp tag_duserpp_nohbp n_userpp_noAffln tag_admin tag_fem tag_male country
+	
 drop if id_msg==.
 des
 * exclude the following variables from being reshaped:
-ds  date_earl_cor jira_posted solv_jira user_tag poster_female poster_junior poster_senior poster_hbp poster_code re_opened status_cum date_sol_1 day_sol_1 n_male n_female n_admin i_hbpplatform n_userpp n_userpp_hbp n_userpp_nohbp p_code p_male p_userhbp p_female p_admin n_code_msg time_solved status_detail topic_status status id_post status_detail status datetime_solved id_msg n_cat cat n_repl y n_views cat_g_brain_sim_model cat_g_neuromorphic cat_g_neurorobotics cat_g_tech_support cat_g_organization cat_g_others date_late date_earl i_code n_re_junior n_re_senior n_re_nonacad p_junior p_senior p_nonacad , not 
+ds  date_earl_cor jira_posted solv_jira user_tag poster_female poster_junior poster_senior poster_hbp poster_code ///
+	re_opened status_cum date_sol_1 day_sol_1 n_male n_female n_admin i_hbpplatform n_userpp n_userpp_hbp ///
+	n_userpp_nohbp p_code p_male p_userhbp p_female p_admin n_code_msg time_solved status_detail ///
+	topic_status status id_post status_detail status datetime_solved id_msg cat n_repl y  cat_g_brain_sim_model ///
+	cat_g_neuromorphic cat_g_neurorobotics cat_g_tech_support cat_g_organization cat_g_others date_late date_earl ///
+	i_code n_re_junior n_re_senior n_re_nonacad p_junior p_senior p_nonacad, not 
 *rename the remaining variable (msg_yqu)
 foreach x of varlist `r(varlist)' {
 rename `x' `x'_
 }
 
 * defining again the variables to be excluded from reshaping
-ds  date_earl_cor  poster_junior poster_senior jira_posted solv_jira user_tag poster_female poster_hbp poster_code re_opened status_cum date_sol_1 day_sol_1  n_male n_female n_admin i_hbpplatform n_userpp n_userpp_hbp n_userpp_nohbp p_code p_male p_userhbp p_female p_admin n_code_msg time_solved status_detail topic_status status id_post status_detail status datetime_solved id_msg n_userpp_nohbp n_cat cat n_repl y n_views cat_g_brain_sim_model cat_g_neuromorphic cat_g_neurorobotics cat_g_tech_support cat_g_organization cat_g_others date_late date_earl i_code n_re_junior n_re_senior n_re_nonacad p_junior p_senior p_nonacad , not 
+ds  date_earl_cor poster_junior poster_senior jira_posted solv_jira user_tag poster_female poster_hbp poster_code ///
+	re_opened status_cum date_sol_1 day_sol_1  n_male n_female n_admin i_hbpplatform n_userpp n_userpp_hbp ///
+	n_userpp_nohbp p_code p_male p_userhbp p_female p_admin n_code_msg time_solved status_detail topic_status ///
+	status id_post status_detail status datetime_solved id_msg n_userpp_nohbp n_cat cat n_repl y ///
+	cat_g_brain_sim_model cat_g_neuromorphic cat_g_neurorobotics cat_g_tech_support cat_g_organization cat_g_others ///
+	date_late date_earl i_code n_re_junior n_re_senior n_re_nonacad p_junior p_senior p_nonacad , not 
 *reshaping the data to wide using msg_yqu as vehicle
 reshape wide `r(varlist)', i(id_post) j(id_msg) 
 des
@@ -391,7 +408,7 @@ label define cat_alllab 1 "Neuromorphic" 2 "Brain Sim/Model" 3 "Neurorobotics" 4
 
 label values cat_all cat_alllab
 des
-
+drop cat_g_*
 save hbp_forum_wide_survival_oneQ_int, replace
 
 
