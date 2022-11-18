@@ -7,7 +7,8 @@
 - each post was reviewed and coded on whether it was forwarded to JIRA
 - the original dataset containing the posts and replies in wide format was converted 
   into long format in which each observation is one reply of a post
-- the user databank and the post data were merged and anonymized and saved as hbp_forum_uqu_2agg_step3.dta
+- the user databank and the post data were anonymized 
+- Forum data was saved as hbp_forum_data2agg.dta and the user data as hbp_forum_user_databank_anonym.dta
 */
 
 
@@ -26,11 +27,9 @@ prepare post-quarter-level regression dataset
 */
 
 *** Starting with preparing the categorical variables and the time-relevant variables 
-use hbp_forum_2agg_step3, clear
+use hbp_forum_data2agg, clear
 
-li id_post id_msg msg_yqu id_user if id_user==75 | id_user==217
-replace id_user=217 if id_user==75    // @ACK - we need to add a line to explain here (recode one user who has two accounts?)
-
+* generate categorical variable for the topic categories 
 gen cat_all = 0
 replace cat_all = 1 if cat_g_neuromorphic == 1
 replace cat_all = 2 if cat_g_brain_sim_model ==1 
@@ -44,7 +43,7 @@ label values cat_all cat_alllab
 tab cat_all
 drop cat_g_*
 
-*** checking and correcting the date variable for the solving time
+*** checking and correcting the format of the date variable for the solving time of the question
 des date_solved
 des time_solved
 generate date_text = string(date_solved, "%td")
@@ -69,6 +68,7 @@ by id_post (id_msg datetime_solved), sort: replace date_sol_1=datetime_solved if
 format date_sol_1 %tcDD/NN/CCYY_HH:MM:SS 
 gen day_sol_1=dofC(date_sol_1)
 format day_sol_1 %td
+label variable day_sol_1 "Solving date of the first question within the thread (MM/DD/YYYY)"
 
 * make sure that we do not have empty lines 
 drop if id_msg==.
@@ -78,38 +78,40 @@ drop if id_qu > 1
 
 
 ***-------------------------
-*** checking the data before aggregating to make sure that within each post we have homogenous info
+*** Conducting plausibility checks with respect to solving time and solving status before aggregating.
+* Thereby, we want to ensure that within each post we have homogenous info.
 
 * 1. verifying that there is no observation where the datetime_solved variable (i.e., the 
-* solving time assigned to the individual reply) is not later than the solving time of the first 
+* solving time assigned to the individual message) is not later than the solving time of the first 
 * question (this is most relevant for multi-question posts, where we mainly focus on the initial Q)
-
 gen x=1
 bysort id_post : replace x=0 if datetime_solved > date_sol_1 
 
-* 2. checking whether any entry has no datetime_solved at all
+* 2. Additionally, checking whether any entry has no datetime_solved at all - not the case
 li id_post id_msg status_sol id_qu datetime_solved if datetime_solved==.
 
-* 3. checking whether any first reply has an datetime_solved that is larger than the date_sol_1
+* 3. Additionally, checking whether any of the initial messages has an datetime_solved that is larger than the date_sol_1
 li id_post datetime_solved date_sol_1 id_msg if x==0 & id_msg==1
 
 * 4. checking whether any first or second reply has an datetime_solved that is larger than the date_sol_1
 li id_post datetime_solved date_sol_1 id_msg if x==0 & id_msg<=2
-
 *not the case - therefore no need to drop if x==0 
-gen check=1
 
-* 5. check that for each post we have the same status_detail
+
+* 5. Lastly, we verify that for each thread has the same value for the status_detail and thus belongs to the same question
+gen check=1
+* for this we sort the data by post and message and create an indicator if the status is different
 bysort id_post (id_msg): replace check=0 if status_detail!=status_detail[1] 
 drop if check==0
-*414 observations deleted
+*indeed there where some remaining follow-up questions left (414 observations deleted) and which were caught now by the status
+* verifying that we still have all initial questions in the dataset
 tab id_msg
 
 // @ACK: the steps 4-5 logic is not exactly clear - we need to add some explanation (let's discuss)
 
 
 ***-------------------------------------------
-*** create separate indicator variables for each solving status, summarizing the different user 
+*** create separate indicator variables for each solving status, summarizing the different user- 
 * solved categories or admin solved categories
 tab status_sol 
 
@@ -156,7 +158,7 @@ save hbp_forum_pqu_2agg_step1, replace
 // we'd better assign better names, or (easier) define at the very beginning block
 // what are the steps involved and why we number them in this particular way 
 // Or, we rename the orders to align them well with the order they show up in our code 
-
+// @LXW: I renamed the file - it was actually easier ;-)
 
 *-------------------------------------------------------------------------------
 **# Adding the user data to the forum data
@@ -235,8 +237,8 @@ save hbp_forum_pq_2agg_step2, replace
 use hbp_forum_pq_2agg_step2, clear
 
 /* next steps_
-	- calcualte the overall number of solved posts (and type of solving status) per quarter 
-	- calucalte the number of tags per message (to then aggregate it on post level in the next step)
+	- calculate the overall number of solved posts (and type of solving status) per quarter 
+	- calculate the number of tags per message (to then aggregate it on post level in the next step)
 */
 sort msg_yqu id_post
 	
@@ -267,7 +269,9 @@ use hbp_forum_pq_2reshape_1, clear
 
 /* next steps:
 generate the indicator variables for the first post characteristics and save it 
-in a seperate file
+in a seperate file. As the initial post characteristics do not change within the thread
+we do not aggregate this data but simply add it later to the aggregated data.
+We obtain now indicators 
 	- whether the poster was female, hbp-affiliated, senior or junior
 	- whether the first post contained code 
 */
@@ -300,7 +304,8 @@ save hbp_forum_pq_2reshape_poster, clear
 
 // @ACK: hi, here I think we use this for the poster at MPI, correct?
 // we can keep and just add a note this is the version used for an MPI poser
-// (which we can also release after PLOS ONE got accepted.)
+// (which we can also release after PLOS ONE got accepted.) @LXW: no, we actually 
+// use it here in the aggregation: with "poster" I am referring to the initial post characteristics as I have written in the comments :-)
 
 
 *--------------------------------------------------------------------------
@@ -439,9 +444,7 @@ save hbp_forum_pq_2reshape_4, replace
 *---------------
 use hbp_forum_pq_2agg_step2, clear
 
-/* calculate the number of distinct countries per post and quarter 
-Source: https://www.statalist.org/forums/forum/general-stata-discussion/general/1486683-counting-distinct-values-cumulatively-by-group
-*/
+* calculate the number of distinct countries per post and quarter 
 
 keep id_post msg_yqu country
 
