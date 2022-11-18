@@ -151,21 +151,24 @@ li id_post datetime_solved date_sol_1 id_msg if x==0 & id_msg==1
 li id_post datetime_solved date_sol_1 id_msg if x==0 & id_msg<=2
 *not the case - therefore no need to drop if x=
 
-* 5. Lastly, we verify that for each thread has the same value for the status_detail and thus belongs to the same question
+/* 5. Lastly, we verify that for each thread has the same value for the status_detail and thus belongs to the same question
+for this we sort the data by post and message and create an indicator if the status is different
+ indeed there where some remaining follow-up questions left (414 observations deleted) which where not captured by the previous
+ round as the first question remained unsolved but a follow-up question to the initial post provided then the answer. These cases were caught now
+ by the status-based search
+/* 
 gen check=1
-* for this we sort the data by post and message and create an indicator if the status is different
 bysort id_post (id_msg): replace check=0 if status_detail!=status_detail[1] 
 li id_post id_msg status_sol date_sol_1 if check==0
 drop if check==0
-*indeed there where some remaining follow-up questions left (414 observations deleted) and which were caught now by the status
+
 * verifying that we still have all initial questions in the dataset
 tab id_msg
 
 
-* check for issues in earliest time and correct for it 
-* 3 posts have the wrong year for the earliest date 
+* check for issues in earliest time and correct for it b/c there are 3 posts with the wrong date for the earliest date 
 li id_post msg_time id_msg datetime_solved date_sol_1 date_earl date_solved if id_post==14 | id_post==35 | id_post==211
-
+* we use the message-timestamp to obtain the date of the message
 * clean date-time raw format (tm=time)
 	gen tim = subinstr(msg_time," AM","AM",.) 
 	replace tim = subinstr(tim," PM","PM",.) 
@@ -178,14 +181,11 @@ gen d_check=date(day,"MDY")
 	format d_check %td 
 	* hour-minutes
 
-
 li id_post msg_time day d_check id_msg datetime_solved date_sol_1 date_earl date_earl_cor date_solved if id_post==14 | id_post==35 | id_post==211, sepby(id_post)
-* correct the 3 posts
-replace date_earl=
-
+* for the next steps we will use the date_earl_cor variable to calculate the time differences
 by id_post (id_msg), sort: gen double date_earl_cor=d_check[1]
 format date_earl_cor %td
-li id_post msg_time day d_check id_msg datetime_solved date_earl date_earl_cor date_solved if date_earl_cor!=date_earl, sepby(id_post)
+
 
 
 
