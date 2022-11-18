@@ -27,16 +27,22 @@ regress nyqu_replies i.i_hbpplatform pyq_code pyq_female pyq_hbp pyq_senior  pyq
 outreg2 using "$RESULTS\Regression_postlevel.doc", replace  /// 
 	keep(i.i_hbpplatform pyq_code pyq_female pyq_hbp pyq_senior  pyq_admin nyqu_ctry)  label  /// 
 	addtext(Year FE , YES)	
+	
+	
 * Column 2	
 regress nyqu_replies i.i_hbpplatform i.poster_code i.poster_female i.poster_hbp i.poster_senior   i.y, vce(robust)
 outreg2 using "$RESULTS\Regression_postlevel.doc", append  /// 
 	keep(i.i_hbpplatform i.poster_code i.poster_female i.poster_hbp i.poster_senior)  ///
 	label addtext(Year FE , YES)	
+	
+	
 * Column 3
 regress nyqu_replies i.i_hbpplatform pyq_code pyq_female pyq_hbp pyq_senior  pyq_admin nyqu_ctry  i.poster_code i.poster_female i.poster_hbp i.poster_senior i.y, vce(robust)
 outreg2 using "$RESULTS\Regression_postlevel.doc", append  /// 
 	keep(i.i_hbpplatform pyq_code pyq_female pyq_hbp pyq_senior  pyq_admin nyqu_ctry  i.poster_code i.poster_female i.poster_hbp i.poster_senior ) /// 
 	label addtext(Year FE & Robust Standard Errors, YES)	
+	
+	
 * Column 4
 regress nyqu_replies pyq_code pyq_female pyq_hbp pyq_senior  pyq_admin nyqu_ctry  i.poster_code i.poster_female i.poster_hbp i.poster_senior i.cat_all i.y, vce(robust)
 outreg2 using "$RESULTS\Regression_postlevel.doc", append  /// 
