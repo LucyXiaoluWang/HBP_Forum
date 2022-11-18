@@ -80,7 +80,6 @@ label variable n_replies "# messages received per post "
 * generate the date 6 months after the initial post was posted
 gen date1_6mon=d_1+183
 format %td date1_6mon
-* originally d_1_sixmon
 label variable date1_6mon "Date 6 months after initial post"
 *calculate the number of messages received per thread within the first 6 months after the initial post
 * for this we loop through the messages ranging from 2-40, as 1 is the initial post
@@ -96,7 +95,6 @@ format %td date1_3mon
 label variable date1_3mon "Date 3 months after initial post"
 
 gen n_msg_3mon = 0
-* originally n_repl_threemon
 forvalues i = 2/40 {
      replace n_msg_3mon = n_msg_3mon + !missing(msg_`i'_txt) if  d_`i' <= date1_3mon
 } 
@@ -108,15 +106,11 @@ label variable n_msg_3mon "# messages per post within 3 months after the initial
 gen x=1
 bys yqu: egen nyqu_post = total(x) 
 bys yqu: egen nyqu_msg_6mon = total(n_msg_6mon)
-* originally
 bys yqu: egen nyqu_msg_3mon = total(n_msg_3mon) 
-* originally nyqu_repl_threemon
 bys yqu: egen nyqu_msg = total(n_msg)
-*originally nyqu_repl 
 gen nyqu_msg_6ppost = nyqu_msg_6mon/nyqu_post
 *oriignally nyqu_rep_six_ppost
 gen nyqu_msg_6ppost = nyqu_msg_3mon/nyqu_post
-*originally nyqu_rep_three_ppost
 label variable nyqu_post "# posts raised per year-quarter" 
 label variable nyqu_msg "# messages per year-quarter"
 label variable nyqu_msg_6mon "# messages within 6 months per year-quarter"
