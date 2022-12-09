@@ -1,5 +1,5 @@
 # Data repository for the paper on the Human Brain Project (HBP) Forum (Kreyer and Wang, 2022)
-This repository contains the replication package (code and data) for the paper "Collaborating Neuroscience Online: The Case of the Human Brain Project Forum" by Ann-Christin Kreyer and Lucy Xiaolu Wang in preparation for the conditional acceptance at PLOS ONE. The corresponding Max Planck Institute Discussion Paper is avaialble at: https://ssrn.com/abstract=4126273
+This repository contains the replication package (code and data) for the paper "Collaborating Neuroscience Online: The Case of the Human Brain Project Forum" by Ann-Christin Kreyer and Lucy Xiaolu Wang published at PLOS ONE (https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0278402). The corresponding Max Planck Institute Discussion Paper is avaialble at: https://ssrn.com/abstract=4126273
 
 ### Folder description
 `Data` folder contains anonymized data for replication.
